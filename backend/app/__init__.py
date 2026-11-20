@@ -7,7 +7,6 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from dotenv import load_dotenv
 
-
 # Load environment variables
 load_dotenv()
 
@@ -20,13 +19,11 @@ def create_app():
 
     app = Flask(__name__, instance_relative_config=True)
 
-    # Create instance directory if it doesn't exist
+    # Create instance directory
     os.makedirs(app.instance_path, exist_ok=True)
 
     # Application configuration
-    app.config["SECRET_KEY"] = os.getenv(
-        "SECRET_KEY", "dev-secret-key"
-    )
+    app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
 
     app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
         "DATABASE_URL", "sqlite:///budget.db"
@@ -34,11 +31,17 @@ def create_app():
 
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-    # Initialize extensions with Flask app
+    # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
 
-    # Configure CORS for React frontend
+    # Import models and register blueprints
+    from . import models
+    from .blueprint import register_blueprints
+
+    register_blueprints(app)
+
+    # Configure CORS
     CORS(
         app,
         resources={
@@ -48,14 +51,11 @@ def create_app():
         }
     )
 
-    # Basic health-check endpoint
     @app.route("/api/health", methods=["GET"])
     def health_check():
         return jsonify({
             "success": True,
             "message": "AI Budget Advisor API is running"
         }), 200
-
-    # Blueprints will be registered here later
 
     return app
