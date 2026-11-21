@@ -97,3 +97,20 @@ def get_suggestions(api_key, income, expenses):
             "success": False,
             "error": "Could not process Gemini's response"
         }
+
+
+from groq import Groq
+
+client = Groq(api_key="api")
+
+response = client.chat.completions.create(
+    model="openai/gpt-oss-20b",
+    messages=[
+        {
+            "role": "user",
+            "content": "Explain Python functions simply."
+        }
+    ]
+)
+
+print(response.choices[0].message.content)

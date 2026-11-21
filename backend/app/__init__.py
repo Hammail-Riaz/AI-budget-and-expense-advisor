@@ -8,12 +8,21 @@ from flask_migrate import Migrate
 from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv()
+# load_dotenv()
 
 # Initialize extensions
 db = SQLAlchemy()
 migrate = Migrate()
 
+from dotenv import load_dotenv
+
+load_dotenv(
+    os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        ".env"
+    ),
+    override=True
+)
 
 def create_app():
 
