@@ -3,6 +3,8 @@ from .transactions import transactions_bp
 from .dashboard import dashboard_bp
 from .budget import budget_bp
 from .analytics import analytics_bp
+from .ai import ai_bp
+from .insights import insights_bp
 
 
 def register_blueprints(app):
@@ -26,3 +28,5 @@ def register_blueprints(app):
     analytics_bp,
     url_prefix="/api/analytics"
     )
+    
+    app.register_blueprint(insights_bp, url_prefix="/api/insights")

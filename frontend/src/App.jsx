@@ -13,14 +13,23 @@ import { AiInsights } from "./pages/AiInsights";
 function SpendWiseWorkspace() {
   const {
     dashboard,
+    dashboardStats,
     transactions,
-    budgets,
+    budget,
+    budgetMonth,
+    budgetYear,
+    budgetLoading,
+    changeBudgetPeriod,
+    saveBudget,
     aiResponse,
     aiLoading,
     addTransaction,
     removeTransaction,
-    addBudget,
+    refreshDashboard,
+    loading,
+    error,
     sendAiPrompt,
+    analytics
   } = useFinanceData();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -41,38 +50,47 @@ function SpendWiseWorkspace() {
             path="/dashboard"
             element={
               <Dashboard
-                dashboard={dashboard}
-                onAskAi={sendAiPrompt}
-                aiResponse={aiResponse}
-                aiLoading={aiLoading}
+                dashboardStats={dashboardStats}
+                analytics={analytics}
+                transactions={transactions}
+                loading={loading}
+                error={error}
+                onRefresh={refreshDashboard}
               />
             }
           />
           <Route
             path="/transactions"
             element={
-              <Transactions
-                transactions={transactions}
-                searchQuery={searchQuery}
-                onOpenAddModal={() => setIsAddModalOpen(true)}
-                onDeleteTransaction={removeTransaction}
+            <Transactions
+              transactions={transactions}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              onOpenAddModal={() => setIsAddModalOpen(true)}
+              onDeleteTransaction={removeTransaction}
+              onRefresh={refreshDashboard}
+              loading={loading}
+              error={error}
               />
-            }
-          />
+                    }
+            />
           <Route
             path="/budgets"
-            element={<Budgets budgets={budgets} onCreateBudget={addBudget} />}
-          />
-          <Route
-            path="/insights"
             element={
-              <AiInsights
-                onAskAi={sendAiPrompt}
-                aiResponse={aiResponse}
-                aiLoading={aiLoading}
+              <Budgets
+                budget={budget}
+                budgetMonth={budgetMonth}
+                budgetYear={budgetYear}
+                dashboardStats={dashboardStats}
+                budgetLoading={budgetLoading}
+                error={error}
+                onChangePeriod={changeBudgetPeriod}
+                onSaveBudget={saveBudget}
+                onRefresh={refreshDashboard}
               />
             }
           />
+          <Route path="/insights" element={<AiInsights />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </div>

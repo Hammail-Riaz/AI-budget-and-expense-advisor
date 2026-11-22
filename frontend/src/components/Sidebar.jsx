@@ -95,10 +95,10 @@ export function Sidebar() {
         <div style={{ display: "flex", alignItems: "center", gap: "0.55rem" }}>
           <img
             src="https://api.dicebear.com/9.x/avataaars/svg?seed=AlexMercer"
-            alt="Alex Mercer"
+            alt="Pgc"
             style={{ width: 28, height: 28, borderRadius: "50%", background: "#334155" }}
           />
-          <span>Alex Mercer</span>
+          <span>Pgc Students</span>
         </div>
         <ChevronDown size={15} color="#94a3b8" />
       </div>

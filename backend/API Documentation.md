@@ -881,3 +881,76 @@ if (data.success) {
 - Months without expenses return `0.0`.
 - Category results are grouped by category.
 - The endpoint provides data suitable for pie/doughnut and bar charts.
+
+
+## 8. POST `/api/ai/advice` — Generate AI Financial Advice
+
+Generates personalized financial recommendations using the current month's financial data and Groq AI.
+
+### 1. Request
+
+| Property | Value |
+|---|---|
+| Method | POST |
+| Endpoint | `/api/ai/advice` |
+| Body | None required |
+
+**URL:**
+```text
+http://127.0.0.1:5000/api/ai/advice
+```
+
+### 2. How It Works
+
+1. Retrieves current month's transactions and budget.
+2. Calculates income, expenses, balance, and budget utilization using Python.
+3. Groups expenses by category.
+4. Sends the financial report to Groq AI.
+5. Returns the financial report and generated advice.
+
+### 3. Expected Response (HTTP 200)
+
+```json
+{
+  "success": true,
+  "message": "AI financial advice generated successfully",
+  "financial_report": {
+    "currency": "PKR",
+    "period": {
+      "month": 11,
+      "year": 2026
+    },
+    "total_income": "10000.00",
+    "total_expenses": "1950.00",
+    "balance": "8050.00",
+    "monthly_budget": "21.00",
+    "remaining_budget": "-1929.00",
+    "budget_utilization": 9285.7,
+    "category_breakdown": {
+      "Food": "1500.00",
+      "Transport": "150.00",
+      "Entertainment": "150.00",
+      "Other": "150.00"
+    }
+  },
+  "advice": "AI-generated financial recommendations..."
+}
+```
+
+### 4. Error Responses
+
+| Status Code | Description |
+|---|---|
+| 429 | Groq API rate limit reached |
+| 500 | Database or unexpected server error |
+| 502 | Groq API request failed |
+| 503 | Groq API key not configured |
+| 504 | Groq API timeout |
+
+### 5. Important Notes
+
+- No request body is required.
+- Financial calculations are performed by Python.
+- AI recommendations are generated using Groq.
+- Financial data is retrieved automatically from SQLite.
+- The Groq API key remains on the backend.

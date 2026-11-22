@@ -1,40 +1,63 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 
-const CATEGORIES = [
-  "Food & Drink",
-  "Cloud Hosting",
-  "Groceries",
-  "Subscriptions",
+const EXPENSE_CATEGORIES = [
+  "Food",
   "Transport",
-  "Housing",
-  "Income",
+  "Education",
+  "Shopping",
+  "Entertainment",
+  "Bills",
+  "Healthcare",
+  "Other",
+];
+
+const INCOME_CATEGORIES = [
+  "Pocket Money",
+  "Salary",
+  "Freelancing",
+  "Business Income",
+  "Other Income",
 ];
 
 export function TransactionModal({ isOpen, onClose, onSave }) {
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("Food & Drink");
+  const [type, setType] = useState("Expense");
+  const [category, setCategory] = useState("Food");
   const [amount, setAmount] = useState("");
-  const [type, setType] = useState("expense");
-  const [paymentMethod, setPaymentMethod] = useState("Chase Freedom");
-  const [date, setDate] = useState("Nov 19, 2026");
+  const [description, setDescription] = useState("");
+  const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
+  const categories = type === "Income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+
+  const handleTypeChange = (nextType) => {
+    setType(nextType);
+    setCategory(nextType === "Income" ? INCOME_CATEGORIES[0] : EXPENSE_CATEGORIES[0]);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!description.trim() || !amount) return;
-    await onSave({
-      description: description.trim(),
-      category,
-      amount: Number(amount),
-      type,
-      paymentMethod,
-      date,
-    });
-    setDescription("");
-    setAmount("");
-    onClose();
+    setErrorMsg("");
+    setSubmitting(true);
+    try {
+      await onSave({
+        amount: Number(amount),
+        category,
+        type,
+        description: description.trim().slice(0, 255),
+        date,
+      });
+      setAmount("");
+      setDescription("");
+      onClose();
+    } catch (err) {
+      setErrorMsg(err.message || "Failed to create transaction");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -60,50 +83,45 @@ export function TransactionModal({ isOpen, onClose, onSave }) {
           </button>
         </div>
 
+        {errorMsg && (
+          <p style={{ color: "#dc2626", fontSize: "0.82rem", marginBottom: "0.65rem" }}>{errorMsg}</p>
+        )}
+
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           <div style={{ display: "flex", gap: "0.5rem" }}>
             <button
               type="button"
-              className={`btn ${type === "expense" ? "btn-teal" : "btn-outline"}`}
+              className={`btn ${type === "Expense" ? "btn-teal" : "btn-outline"}`}
               style={{ flex: 1, justifyContent: "center" }}
-              onClick={() => setType("expense")}
+              onClick={() => handleTypeChange("Expense")}
             >
               Expense
             </button>
             <button
               type="button"
-              className={`btn ${type === "income" ? "btn-teal" : "btn-outline"}`}
+              className={`btn ${type === "Income" ? "btn-teal" : "btn-outline"}`}
               style={{ flex: 1, justifyContent: "center" }}
-              onClick={() => setType("income")}
+              onClick={() => handleTypeChange("Income")}
             >
               Income
             </button>
           </div>
 
           <input
-            type="text"
-            className="input"
-            placeholder="Description (e.g., Starbucks Coffee)"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            required
-          />
-
-          <input
             type="number"
             step="0.01"
             min="0.01"
             className="input"
-            placeholder="Amount (USD)"
+            placeholder="Amount (greater than 0)"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             required
           />
 
           <select className="select" value={category} onChange={(e) => setCategory(e.target.value)}>
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
               </option>
             ))}
           </select>
@@ -111,25 +129,26 @@ export function TransactionModal({ isOpen, onClose, onSave }) {
           <input
             type="text"
             className="input"
-            placeholder="Payment Method"
-            value={paymentMethod}
-            onChange={(e) => setPaymentMethod(e.target.value)}
+            placeholder="Description (optional, max 255 chars)"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            maxLength={255}
           />
 
           <input
-            type="text"
+            type="date"
             className="input"
-            placeholder="Date (e.g., Nov 19, 2026)"
             value={date}
             onChange={(e) => setDate(e.target.value)}
+            required
           />
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "0.4rem" }}>
             <button type="button" className="btn btn-outline" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="btn btn-teal">
-              Save Transaction
+            <button type="submit" className="btn btn-teal" disabled={submitting}>
+              {submitting ? "Saving..." : "Save Transaction"}
             </button>
           </div>
         </form>
