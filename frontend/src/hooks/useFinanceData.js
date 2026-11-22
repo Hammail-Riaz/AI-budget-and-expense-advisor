@@ -1,82 +1,146 @@
 import { useState, useEffect, useCallback } from "react";
 import { financeService } from "../services/financeService";
 
-export function useFinanceData() {
-  const [dashboard, setDashboard] = useState(null);
-  const [transactions, setTransactions] = useState([]);
-  const [budgets, setBudgets] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [aiResponse, setAiResponse] = useState("");
-  const [aiLoading, setAiLoading] = useState(false);
+const MONTH_NAMES = [
+  "",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
-  const loadAll = useCallback(async () => {
-    setLoading(true);
+const now = new Date();
+
+export function useFinanceData() {
+  const [dashboardStats, setDashboardStats] = useState(null);
+  const [analytics, setAnalytics] = useState({
+    category_expenses: [],
+    monthly_expenses: [],
+  });
+  const [transactions, setTransactions] = useState([]);
+  const [budget, setBudget] = useState(null);
+  const [budgetMonth, setBudgetMonth] = useState(now.getMonth() + 1);
+  const [budgetYear, setBudgetYear] = useState(now.getFullYear());
+  const [budgetLoading, setBudgetLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const fetchBudget = useCallback(async (month = budgetMonth, year = budgetYear) => {
+    setBudgetLoading(true);
     try {
-      const [dashData, txData, budgetData] = await Promise.all([
-        financeService.getDashboardData(),
+      const res = await financeService.getBudget({ month, year });
+      setBudget(res.budget || null);
+      return res.budget || null;
+    } catch (err) {
+      setError(err.message || "Failed to fetch monthly budget");
+      throw err;
+    } finally {
+      setBudgetLoading(false);
+    }
+  }, [budgetMonth, budgetYear]);
+
+  const refreshDashboard = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [dashRes, analyticsRes, txRes, budgetRes] = await Promise.all([
+        financeService.getDashboard(),
+        financeService.getAnalytics(),
         financeService.getTransactions(),
-        financeService.getBudgets(),
+        financeService.getBudget({ month: budgetMonth, year: budgetYear }),
       ]);
-      setDashboard(dashData);
-      setTransactions(txData);
-      setBudgets(budgetData);
+
+      setDashboardStats(dashRes.dashboard || null);
+      setAnalytics({
+        category_expenses: analyticsRes.analytics?.category_expenses || [],
+        monthly_expenses: (analyticsRes.analytics?.monthly_expenses || []).map((m) => ({
+          ...m,
+          label: `${MONTH_NAMES[m.month] || m.month} ${m.year}`,
+          total: Number(m.total) || 0,
+        })),
+      });
+      setTransactions(Array.isArray(txRes.transactions) ? txRes.transactions : []);
+      setBudget(budgetRes.budget || null);
+    } catch (err) {
+      setError(err.message || "Failed to load data from backend");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [budgetMonth, budgetYear]);
 
   useEffect(() => {
-    loadAll();
-  }, [loadAll]);
+    refreshDashboard();
+  }, [refreshDashboard]);
+
+  const changeBudgetPeriod = async (nextMonth, nextYear) => {
+    const m = Number(nextMonth);
+    const y = Number(nextYear);
+    setBudgetMonth(m);
+    setBudgetYear(y);
+    await fetchBudget(m, y);
+  };
+
+  const saveBudget = async ({ monthly_limit, month = budgetMonth, year = budgetYear }) => {
+    setError("");
+    setBudgetLoading(true);
+    try {
+      const res = await financeService.saveBudget({
+        monthly_limit: Number(monthly_limit),
+        month: Number(month),
+        year: Number(year),
+      });
+      setBudget(res.budget || null);
+      await refreshDashboard();
+      return res.budget;
+    } catch (err) {
+      setError(err.message || "Failed to save monthly budget");
+      throw err;
+    } finally {
+      setBudgetLoading(false);
+    }
+  };
 
   const addTransaction = async (newTx) => {
-    const isExpense = newTx.type === "expense";
-    const signedAmount = isExpense ? -Math.abs(Number(newTx.amount)) : Math.abs(Number(newTx.amount));
-    const created = await financeService.createTransaction({
-      ...newTx,
-      amount: signedAmount,
-    });
-    setTransactions((prev) => [created, ...prev]);
-    return created;
+    setError("");
+    const res = await financeService.createTransaction(newTx);
+    await refreshDashboard();
+    return res.transaction;
   };
 
   const removeTransaction = async (id) => {
-    await financeService.deleteTransaction(id);
-    setTransactions((prev) => prev.filter((t) => t.id !== id));
-  };
-
-  const addBudget = async (budget) => {
-    const created = await financeService.createBudget({
-      ...budget,
-      limit: Number(budget.limit),
-    });
-    setBudgets((prev) => [...prev, created]);
-    return created;
-  };
-
-  const sendAiPrompt = async (prompt) => {
-    if (!prompt.trim()) return;
-    setAiLoading(true);
+    setError("");
     try {
-      const res = await financeService.askAiAssistant(prompt);
-      setAiResponse(res.reply);
-      return res.reply;
-    } finally {
-      setAiLoading(false);
+      await financeService.deleteTransaction(id);
+      await refreshDashboard();
+    } catch (err) {
+      setError(err.message || "Failed to delete transaction");
+      throw err;
     }
   };
 
   return {
-    dashboard,
+    dashboardStats,
+    analytics,
     transactions,
-    budgets,
+    budget,
+    budgetMonth,
+    budgetYear,
+    budgetLoading,
     loading,
-    aiResponse,
-    aiLoading,
+    error,
+    refreshDashboard,
+    fetchBudget,
+    changeBudgetPeriod,
+    saveBudget,
     addTransaction,
     removeTransaction,
-    addBudget,
-    sendAiPrompt,
-    refresh: loadAll,
   };
 }

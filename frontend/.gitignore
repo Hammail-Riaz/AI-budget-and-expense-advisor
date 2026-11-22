@@ -13,5 +13,5 @@ frontend/.env
 frontend/.env.local
 
 # OS & editor files
-.DS_Store
+.DS_Store    
 Thumbs.db

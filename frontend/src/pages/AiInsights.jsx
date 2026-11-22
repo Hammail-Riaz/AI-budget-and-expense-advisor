@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Sparkles, Send } from "lucide-react";
 
 export function AiInsights({ onAskAi, aiResponse, aiLoading }) {
-  const [question, setQuestion] = useState("How can I save $200 by next month?");
+  const [question, setQuestion] = useState("How can I save Rs 200 by next month?");
 
   const handleSubmit = async (e) => {
     e.preventDefault();

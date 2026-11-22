@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5000/api";
 
 export async function apiRequest(endpoint, { method = "GET", body, headers = {}, signal } = {}) {
   const token = localStorage.getItem("spendwise_token");
