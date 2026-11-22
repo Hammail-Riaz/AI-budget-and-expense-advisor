@@ -1,4 +1,3 @@
-
 import os
 import json
 import requests
@@ -10,6 +9,7 @@ from sqlalchemy import func
 
 from .. import db
 from ..models import Transaction, Budget
+from pathlib import Path                    
 
 from groq import Groq
 from groq import (
@@ -18,6 +18,11 @@ from groq import (
     APIConnectionError,
     APIStatusError
 )
+from dotenv import load_dotenv
+
+# If this file is inside backend/app/services/, go up 3 levels to backend/
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+load_dotenv(BASE_DIR / ".env", override=True)
 
 GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
 
@@ -212,9 +217,7 @@ STRICT FINANCIAL ACCURACY RULES
 13. Do not assume the user has a salary, paycheck,
     savings account, or automatic payment facility.
 
-14. Describe the difference between recorded income and
-    expenses as a monthly surplus, not proof of overall
-    financial health.
+14. Prioritize monthly_budget, total_expenses, and remaining_budget when summarizing monthly affordability; do not treat zero recorded income as a spending limit when a monthly budget is set.
 
 15. Never present an estimate or assumption as a verified fact.
 
@@ -247,7 +250,7 @@ Use these four sections in your response:
 
 ### 1. Financial Overview
 
-- Summarize total income, total expenses, and balance.
+- Summarize monthly budget, total expenses, and remaining budget (plus total income and balance if recorded).   
 - Explain the user's overall financial position.
 - Keep the explanation concise and understandable.
 
@@ -315,7 +318,7 @@ Generate the final advice using the four required sections.
                     "role": "user",
                     "content": prompt
                 }
-            ]
+            ]   
         )
 
         advice = response.choices[0].message.content

@@ -23,7 +23,7 @@ function formatAmount(amount, type) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-  return type === "Income" ? `+$${formatted}` : `-$${formatted}`;
+  return type === "Income" ? `+Rs ${formatted}` : `-Rs ${formatted}`;
 }
 
 export function Transactions({
@@ -180,19 +180,19 @@ export function Transactions({
           <div className="btn btn-outline" style={{ cursor: "default" }}>
             Total Income:{" "}
             <strong style={{ color: "#0d9488" }}>
-              +${totalIncome.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+              +Rs {totalIncome.toLocaleString("en-US", { minimumFractionDigits: 2 })}
             </strong>
           </div>
           <div className="btn btn-outline" style={{ cursor: "default" }}>
             Total Expenses:{" "}
             <strong>
-              -${totalExpenses.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+              -Rs {totalExpenses.toLocaleString("en-US", { minimumFractionDigits: 2 })}
             </strong>
           </div>
           <div className="btn btn-outline" style={{ cursor: "default" }}>
             Net Balance:{" "}
             <strong style={{ color: netBalance < 0 ? "#dc2626" : "var(--text-main)" }}>
-              {netBalance < 0 ? "-" : ""}$
+              {netBalance < 0 ? "-" : ""}Rs
               {Math.abs(netBalance).toLocaleString("en-US", { minimumFractionDigits: 2 })}
             </strong>
           </div>

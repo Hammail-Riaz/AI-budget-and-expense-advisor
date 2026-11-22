@@ -1,3 +1,4 @@
+import { RefreshCw } from "lucide-react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -9,15 +10,28 @@ import {
   PieChart,
   Pie,
   Cell,
+  Legend,
 } from "recharts";
 
-const PIE_COLORS = ["#0f172a", "#0d9488", "#3b82f6", "#6366f1", "#8b5cf6", "#f59e0b", "#ec4899", "#64748b"];
+const PIE_COLORS = [
+  "#0d9488",
+  "#0284c7",
+  "#f59e0b",
+  "#8b5cf6",
+  "#ef4444",
+  "#10b981",
+  "#ec4899",
+  "#6366f1",
+];
 
-function formatMoney(value) {
-  if (value === null || value === undefined || value === "") return "Not set";
+function formatRs(value) {
   const num = Number(value);
-  if (Number.isNaN(num)) return "0.00";
-  return `Rs ${num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (Number.isNaN(num)) return "Rs 0.00";
+  const sign = num < 0 ? "-" : "";
+  return `${sign}Rs ${Math.abs(num).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 export function Dashboard({
@@ -28,54 +42,76 @@ export function Dashboard({
   error,
   onRefresh,
 }) {
-  if (loading && !dashboardStats) {
-    return <div className="page-content">Loading live dashboard statistics...</div>;
-  }
+  const txList = Array.isArray(transactions) ? transactions : [];
+  const recentTransactions = txList.slice(0, 5);
 
-  const safeTransactions = Array.isArray(transactions) ? transactions : [];
-  const recentTx = safeTransactions.slice(0, 5);
+  const budgetLimitNum =
+    dashboardStats?.monthly_budget !== null &&
+    dashboardStats?.monthly_budget !== undefined
+      ? Number(dashboardStats.monthly_budget)
+      : null;
 
-  const totalIncome = Number(dashboardStats?.total_income || 0);
-  const totalExpenses = Number(dashboardStats?.total_expenses || 0);
-  const balance = Number(dashboardStats?.balance || 0);
-  const monthlyBudget = dashboardStats?.monthly_budget;
-  const remainingBudget = dashboardStats?.remaining_budget;
-
-  const hasBudget = monthlyBudget !== null && monthlyBudget !== undefined;
-  const budgetNum = hasBudget ? Number(monthlyBudget) : 0;
-  const utilizedPct =
-    hasBudget && budgetNum > 0 ? Math.min(100, Math.round((totalExpenses / budgetNum) * 100)) : 0;
-
-  const categoryData = (analytics?.category_expenses || []).map((item, idx) => ({
-    name: item.category,
-    value: Number(item.total) || 0,
-    color: PIE_COLORS[idx % PIE_COLORS.length],
+  const monthlySeries = (
+    Array.isArray(analytics?.monthly_expenses) ? analytics.monthly_expenses : []
+  ).map((m) => ({
+    ...m,
+    label: m.label || `${m.month}/${m.year}`,
+    total: Number(m.total) || 0,
+    budget: budgetLimitNum,
   }));
 
-  const monthlyData = analytics?.monthly_expenses || [];
-  const period = dashboardStats?.period;
+  const categorySeries = (
+    Array.isArray(analytics?.category_expenses) ? analytics.category_expenses : []
+  )
+    .map((c) => ({
+      name: c.category,
+      value: Number(c.total) || 0,
+    }))
+    .filter((c) => c.value > 0);
+
+  const totalIncome = dashboardStats?.total_income ?? "0.00";
+  const totalExpenses = dashboardStats?.total_expenses ?? "0.00";
+  const balance = dashboardStats?.balance ?? "0.00";
+  const hasBudget = budgetLimitNum !== null && !Number.isNaN(budgetLimitNum);
+  const totalExpensesNum = Number(totalExpenses) || 0;
+  const remainingBudgetNum = hasBudget ? budgetLimitNum - totalExpensesNum : null;
 
   return (
     <div className="page-content">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.1rem" }}>
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: "1rem",
+          marginBottom: "1.1rem",
+          flexWrap: "wrap",
+        }}
+      >
         <div>
-          <h1 style={{ fontSize: "1.55rem", fontWeight: 700 }}>Welcome back, Alex!</h1>
+          <h1 style={{ fontSize: "1.5rem", fontWeight: 700 }}>Welcome back, Sir!</h1>
           <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
-            {period ? `Period: ${period.month}/${period.year}` : "Current Month Overview"}
+            Current Month Overview
           </p>
         </div>
-        <button type="button" className="btn btn-outline" onClick={onRefresh}>
-          Refresh Data
+
+        <button type="button" className="btn btn-outline" onClick={onRefresh} disabled={loading}>
+          <RefreshCw size={15} />
+          <span>{loading ? "Refreshing..." : "Refresh Data"}</span>
         </button>
       </div>
 
       {error && (
-        <div className="card" style={{ borderColor: "#ef4444", color: "#ef4444", marginBottom: "1rem" }}>
+        <div
+          className="card"
+          style={{ borderColor: "#ef4444", color: "#dc2626", marginBottom: "1rem" }}
+        >
           {error}
         </div>
       )}
 
-      {/* Top KPI Cards from GET /api/dashboard */}
+      {/* Top KPI Cards */}
       <div
         style={{
           display: "grid",
@@ -85,162 +121,194 @@ export function Dashboard({
         }}
       >
         <div className="card">
-          <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontWeight: 500 }}>
+          <div style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>
             Total Spent This Month
           </div>
-          <div style={{ fontSize: "1.65rem", fontWeight: 700, marginTop: "0.45rem" }}>
-            {formatMoney(totalExpenses)}
+          <div style={{ fontSize: "1.5rem", fontWeight: 700, marginTop: "0.3rem" }}>
+            {formatRs(totalExpenses)}
           </div>
-          <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.35rem" }}>
-            Income: {formatMoney(totalIncome)}
-          </div>
-        </div>
-
-        <div className="card">
-          <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontWeight: 500 }}>
-            Current Balance
-          </div>
-          <div
-            style={{
-              fontSize: "1.65rem",
-              fontWeight: 700,
-              marginTop: "0.45rem",
-              color: balance < 0 ? "#dc2626" : "var(--text-main)",
-            }}
-          >
-            {formatMoney(balance)}
-          </div>
-          <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.35rem" }}>
-            {balance < 0 ? "Expenses exceed income" : "Income minus expenses"}
+          <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
+            Income: {formatRs(totalIncome)}
           </div>
         </div>
 
         <div className="card">
-          <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontWeight: 500 }}>
-            Monthly Budget & Remaining
+          <div style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>Current Balance</div>
+          <div style={{ fontSize: "1.5rem", fontWeight: 700, marginTop: "0.3rem" }}>
+            {formatRs(remainingBudgetNum)}
           </div>
-          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginTop: "0.45rem" }}>
-            <span style={{ fontSize: "1.65rem", fontWeight: 700 }}>{formatMoney(monthlyBudget)}</span>
-            {hasBudget && <span style={{ fontWeight: 700, fontSize: "0.95rem" }}>{utilizedPct}%</span>}
+          <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
+            Income minus expenses
           </div>
-          <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.35rem" }}>
-            {hasBudget ? `Remaining: ${formatMoney(remainingBudget)}` : "No monthly budget configured"}
+        </div>
+
+        <div className="card">
+          <div style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>
+            Monthly Budget &amp; Remaining
           </div>
-          {hasBudget && (
-            <div style={{ height: 7, background: "#e2e8f0", borderRadius: 999, marginTop: "0.55rem", overflow: "hidden" }}>
-              <div
-                style={{
-                  width: `${utilizedPct}%`,
-                  height: "100%",
-                  background: utilizedPct > 90 ? "#ef4444" : "#0d9488",
-                }}
-              />
-            </div>
-          )}
+          <div style={{ fontSize: "1.5rem", fontWeight: 700, marginTop: "0.3rem" }}>
+            {hasBudget ? formatRs(dashboardStats.monthly_budget) : "Not set"}
+          </div>
+          <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
+            {hasBudget
+              ? `Remaining: ${formatRs(dashboardStats.remaining_budget)}`
+              : "No monthly budget configured"}
+          </div>
         </div>
       </div>
 
-      {/* Charts from GET /api/analytics */}
+      {/* Charts Row: LineChart & PieChart */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1.55fr 1fr",
+          gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
           gap: "1rem",
           marginBottom: "1rem",
         }}
       >
         <div className="card">
-          <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.75rem" }}>
+          <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.85rem" }}>
             Monthly Expense Trend (6 Months)
           </h3>
-          <div style={{ width: "100%", height: 230 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#eef2f6" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748b" }} />
-                <YAxis tickFormatter={(v) => `Rs ${v}`} tick={{ fontSize: 11, fill: "#64748b" }} />
-                <Tooltip formatter={(val) => formatMoney(val)} />
-                <Line type="monotone" dataKey="total" stroke="#0d9488" strokeWidth={2.5} dot={{ r: 3 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+
+          {monthlySeries.length === 0 ? (
+            <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
+              No monthly expense trend data available.
+            </p>
+          ) : (
+            <div style={{ width: "100%", height: 260 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={monthlySeries} margin={{ top: 10, right: 16, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip formatter={(val) => formatRs(val)} />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="total"
+                    name="Expenses"
+                    stroke="#0d9488"
+                    strokeWidth={2.5}
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                  {hasBudget && (
+                    <Line
+                      type="monotone"
+                      dataKey="budget"
+                      name="Monthly Budget"
+                      stroke="#f59e0b"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      dot={false}
+                    />
+                  )}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
 
         <div className="card">
-          <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.5rem" }}>
+          <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.85rem" }}>
             Expense Breakdown (Current Month)
           </h3>
-          {categoryData.length === 0 ? (
-            <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", paddingTop: "2rem" }}>
+
+          {categorySeries.length === 0 ? (
+            <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
               No expense categories recorded for this month yet.
             </p>
           ) : (
-            <>
-              <div style={{ width: "100%", height: 170 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={categoryData} dataKey="value" nameKey="name" innerRadius={42} outerRadius={68} paddingAngle={2}>
-                      {categoryData.map((entry) => (
-                        <Cell key={entry.name} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(val) => formatMoney(val)} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0.65rem", fontSize: "0.75rem" }}>
-                {categoryData.map((item) => (
-                  <span key={item.name} style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: item.color }} />
-                    {item.name}: {formatMoney(item.value)}
-                  </span>
-                ))}
-              </div>
-            </>
+            <div style={{ width: "100%", height: 260 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={categorySeries}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={82}
+                    label={({ name, percent }) =>
+                      `${name} (${(percent * 100).toFixed(0)}%)`
+                    }
+                  >
+                    {categorySeries.map((entry, index) => (
+                      <Cell
+                        key={`cell-${entry.name}`}
+                        fill={PIE_COLORS[index % PIE_COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(val) => formatRs(val)} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Recent Transactions from GET /api/transactions */}
+      {/* Recent Transactions */}
       <div className="card">
-        <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.75rem" }}>Recent Transactions</h3>
-        {recentTx.length === 0 ? (
-          <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>No transactions found in the database.</p>
+        <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.75rem" }}>
+          Recent Transactions
+        </h3>
+
+        {recentTransactions.length === 0 ? (
+          <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
+            No transactions found in the database.
+          </p>
         ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.86rem" }}>
             <thead>
-              <tr style={{ color: "var(--text-muted)", borderBottom: "1px solid var(--border-color)", textAlign: "left" }}>
-                <th style={{ paddingBottom: "0.5rem" }}>Description</th>
-                <th style={{ paddingBottom: "0.5rem" }}>Category</th>
-                <th style={{ paddingBottom: "0.5rem" }}>Type</th>
-                <th style={{ paddingBottom: "0.5rem" }}>Date</th>
-                <th style={{ paddingBottom: "0.5rem", textAlign: "right" }}>Amount</th>
+              <tr
+                style={{
+                  borderBottom: "1px solid var(--border-color)",
+                  color: "var(--text-muted)",
+                  textAlign: "left",
+                }}
+              >
+                <th style={{ padding: "0.55rem 0.4rem" }}>Date</th>
+                <th style={{ padding: "0.55rem 0.4rem" }}>Description</th>
+                <th style={{ padding: "0.55rem 0.4rem" }}>Category</th>
+                <th style={{ padding: "0.55rem 0.4rem" }}>Type</th>
+                <th style={{ padding: "0.55rem 0.4rem", textAlign: "right" }}>Amount</th>
               </tr>
             </thead>
             <tbody>
-              {recentTx.map((tx) => (
-                <tr key={tx.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                  <td style={{ padding: "0.55rem 0", fontWeight: 500 }}>{tx.description || "-"}</td>
-                  <td style={{ padding: "0.55rem 0", color: "var(--text-muted)" }}>{tx.category}</td>
-                  <td style={{ padding: "0.55rem 0", color: "var(--text-muted)" }}>{tx.type}</td>
-                  <td style={{ padding: "0.55rem 0", color: "var(--text-muted)" }}>{tx.date}</td>
-                  <td
-                    style={{
-                      padding: "0.55rem 0",
-                      textAlign: "right",
-                      fontWeight: 600,
-                      color: tx.type === "Income" ? "#0d9488" : "var(--text-main)",
-                    }}
-                  >
-                    {tx.type === "Income" ? "+" : "-"}
-                    {formatMoney(tx.amount)}
-                  </td>
-                </tr>
-              ))}
+              {recentTransactions.map((tx) => {
+                const isIncome = tx.type === "Income";
+                const amt = Math.abs(Number(tx.amount) || 0);
+                return (
+                  <tr key={tx.id} style={{ borderBottom: "1px solid var(--border-color)" }}>
+                    <td style={{ padding: "0.6rem 0.4rem", color: "var(--text-muted)" }}>
+                      {tx.date}
+                    </td>
+                    <td style={{ padding: "0.6rem 0.4rem", fontWeight: 600 }}>
+                      {tx.description || "-"}
+                    </td>
+                    <td style={{ padding: "0.6rem 0.4rem" }}>{tx.category}</td>
+                    <td style={{ padding: "0.6rem 0.4rem" }}>{tx.type}</td>
+                    <td
+                      style={{
+                        padding: "0.6rem 0.4rem",
+                        textAlign: "right",
+                        fontWeight: 700,
+                        color: isIncome ? "#0d9488" : "var(--text-main)",
+                      }}
+                    >
+                      {isIncome ? "+" : "-"}
+                      {formatRs(amt)}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
       </div>
     </div>
   );
-}
+} 

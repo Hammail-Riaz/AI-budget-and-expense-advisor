@@ -29,6 +29,7 @@ function SpendWiseWorkspace() {
     loading,
     error,
     sendAiPrompt,
+    analytics
   } = useFinanceData();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -49,10 +50,12 @@ function SpendWiseWorkspace() {
             path="/dashboard"
             element={
               <Dashboard
-                dashboard={dashboard}
-                onAskAi={sendAiPrompt}
-                aiResponse={aiResponse}
-                aiLoading={aiLoading}
+                dashboardStats={dashboardStats}
+                analytics={analytics}
+                transactions={transactions}
+                loading={loading}
+                error={error}
+                onRefresh={refreshDashboard}
               />
             }
           />
@@ -87,6 +90,7 @@ function SpendWiseWorkspace() {
               />
             }
           />
+          <Route path="/insights" element={<AiInsights />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </div>

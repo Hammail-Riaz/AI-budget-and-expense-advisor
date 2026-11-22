@@ -18,8 +18,8 @@ const MONTHS = [
 
 function formatMoney(val) {
   const num = Number(val);
-  if (Number.isNaN(num)) return "$0.00";
-  return `$${num.toLocaleString("en-US", {
+  if (Number.isNaN(num)) return "Rs 0.00";
+  return `Rs ${num.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;

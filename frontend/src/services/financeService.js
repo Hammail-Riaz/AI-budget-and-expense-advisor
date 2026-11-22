@@ -37,4 +37,7 @@ export const financeService = {
       body: budgetData,
     });
   },
+  getInsights() {
+    return apiRequest("/insights");
+  },  
 };

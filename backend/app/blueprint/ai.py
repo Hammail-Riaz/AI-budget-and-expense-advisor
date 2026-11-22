@@ -1,4 +1,3 @@
-
 from flask import Blueprint, jsonify, current_app
 from sqlalchemy.exc import SQLAlchemyError
 
